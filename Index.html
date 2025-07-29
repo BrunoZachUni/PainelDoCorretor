@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Corretor PRO - Firebase Edition</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Biblioteca SheetJS (xlsx) para ler arquivos de planilha -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            transition: opacity 0.3s ease-in-out;
+        }
+        body.loading {
+            opacity: 0;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        /* Esconde todas as telas principais por padrão */
+        #corretorDashboard, #adminDashboard, #registerScreen, #brokerManagementScreen, #adminBrokerViewScreen, #adminAnalysisDashboard { display: none; }
+        .loader {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 loading">
+
+    <!-- Tela de Login -->
+    <div id="loginScreen" class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+        <div class="w-full max-w-sm p-8 space-y-6 bg-white rounded-xl shadow-lg border border-gray-200">
+            <div class="flex justify-center flex-col items-center">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600 mb-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <h1 class="text-2xl font-bold text-center text-gray-800">Acessar Painel</h1>
+                <p class="text-center text-gray-500 text-sm mt-1">Bem-vindo(a) de volta!</p>
+            </div>
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label for="email" class="text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="password" class="text-sm font-medium text-gray-700">Senha</label>
+                    <input type="password" id="password" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <button type="submit" class="w-full px-4 py-2 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center justify-center">Entrar</button>
+                </div>
+                <p id="loginError" class="text-sm text-center text-red-600"></p>
+            </form>
+            <p class="text-sm text-center text-gray-600">Não tem uma conta? <button id="showRegisterBtn" class="font-medium text-indigo-600 hover:underline">Crie uma aqui</button></p>
+        </div>
+    </div>
+    
+    <!-- Tela de Cadastro -->
+    <div id="registerScreen" class="flex items-center justify-center min-h-screen bg-gray-100 p-4">
+        <div class="w-full max-w-sm p-8 space-y-6 bg-white rounded-xl shadow-lg border border-gray-200">
+            <div class="flex justify-center flex-col items-center">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600 mb-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <h1 class="text-2xl font-bold text-center text-gray-800">Criar Nova Conta</h1>
+            </div>
+            <form id="registerForm" class="space-y-6">
+                 <div>
+                    <label for="registerName" class="text-sm font-medium text-gray-700">Nome Completo</label>
+                    <input type="text" id="registerName" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="registerEmail" class="text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="registerEmail" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="registerPassword" class="text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres)</label>
+                    <input type="password" id="registerPassword" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <button type="submit" class="w-full px-4 py-2 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center justify-center">Criar Conta</button>
+                </div>
+                <p id="registerError" class="text-sm text-center text-red-600"></p>
+            </form>
+             <p class="text-sm text-center text-gray-600">Já tem uma conta? <button id="showLoginBtn" class="font-medium text-indigo-600 hover:underline">Faça login</button></p>
+        </div>
+    </div>
+
+    <!-- PAINEL DO CORRETOR -->
+    <div id="corretorDashboard">
+        <div class="p-4 md:p-8 max-w-7xl mx-auto">
+            <header class="flex flex-col md:flex-row justify-between items-center mb-8 pb-4 border-b border-gray-300">
+                <div class="flex items-center space-x-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <h1 class="text-3xl font-bold text-gray-800">Painel do Corretor</h1>
+                </div>
+                <div class="text-right mt-4 md:mt-0">
+                    <p id="corretorUserInfo" class="text-lg font-medium text-gray-700"></p>
+                    <button id="corretorLogoutBtn" class="text-sm text-indigo-600 hover:underline">Sair</button>
+                </div>
+            </header>
+
+            <div id="corretorLoader" class="flex justify-center items-center h-64"><div class="loader"></div></div>
+
+            <div id="corretorMainContent" class="hidden">
+                <div class="mb-6 flex justify-start items-center space-x-2">
+                    <label for="monthSelector" class="text-sm font-medium text-gray-700">Mostrar Desempenho de:</label>
+                    <select id="monthSelector" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-auto p-2"></select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="card p-6 flex flex-col"><h3 class="text-lg font-semibold text-gray-700">Prêmio Gerado</h3><p id="totalPremio" class="text-4xl font-bold text-gray-900 my-2">R$ 0,00</p><div class="flex-grow overflow-y-auto h-32"><ul id="listaPremios" class="text-sm text-gray-600 space-y-1"></ul></div></div>
+                    <div class="card p-6 flex flex-col"><h3 class="text-lg font-semibold text-gray-700">Comissões a Receber</h3><p id="totalComissao" class="text-4xl font-bold text-gray-900 my-2">R$ 0,00</p><div class="flex-grow overflow-y-auto h-32"><ul id="listaComissoes" class="text-sm text-gray-600 space-y-1"></ul></div></div>
+                    <div class="card p-6 flex flex-col"><h3 class="text-lg font-semibold text-gray-700">Próximas Renovações</h3><p id="totalRenovacoes" class="text-4xl font-bold text-gray-900 my-2">0 apólices</p><div class="flex-grow overflow-y-auto h-32"><ul id="listaRenovacoes" class="text-sm text-gray-600 space-y-2"></ul></div></div>
+                </div>
+                <div class="card p-6"><div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4"><h2 class="text-xl font-semibold text-gray-700">Meus Lembretes</h2><button id="addLembreteBtn" class="mt-3 sm:mt-0 bg-gray-800 text-white font-bold py-2 px-4 rounded-full hover:bg-gray-900 transition duration-300 flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span>Novo Lembrete</span></button></div><div id="listaLembretes" class="space-y-3"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAINEL DE IMPORTAÇÃO DO ADMINISTRADOR -->
+    <div id="adminDashboard">
+        <div class="p-4 md:p-8 max-w-7xl mx-auto">
+             <header class="flex flex-col md:flex-row justify-between items-center mb-8 pb-4 border-b border-gray-300">
+                <div class="flex items-center space-x-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <h1 class="text-3xl font-bold text-gray-800">Painel do Administrador</h1>
+                </div>
+                <div class="text-right mt-4 md:mt-0">
+                    <p id="adminUserInfo" class="text-lg font-medium text-gray-700"></p>
+                    <button id="adminLogoutBtn" class="text-sm text-indigo-600 hover:underline">Sair</button>
+                </div>
+            </header>
+            
+            <div class="flex flex-col sm:flex-row justify-end mb-6 space-y-2 sm:space-y-0 sm:space-x-4">
+                <button id="goToAnalysisBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow hover:bg-blue-700 transition duration-300 flex items-center justify-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    <span>Ver Análises</span>
+                </button>
+                <button id="manageBrokersBtn" class="bg-white text-gray-700 font-bold py-2 px-4 rounded-full shadow hover:bg-gray-100 transition duration-300 flex items-center justify-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span>Gerenciar Corretores</span>
+                </button>
+            </div>
+
+            <div class="card p-6 mb-8">
+                <h2 class="text-xl font-semibold text-gray-700 mb-2">Importar e Distribuir Dados</h2>
+                <p class="text-gray-500 mb-4">A lista de corretores é puxada da base de dados. Apenas suba a planilha com os dados a serem distribuídos.</p>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">1. Planilha de Dados</label>
+                    <input type="file" id="dataFileInput" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" />
+                </div>
+
+                <div class="mb-4">
+                    <label for="corretorNameColumn" class="block text-sm font-medium text-gray-700">2. Nome da Coluna com o NOME do Corretor</label>
+                    <input type="text" id="corretorNameColumn" value="Corretor" class="mt-1 block w-full md:w-1/3 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+
+                <div class="flex justify-end">
+                    <button id="importBtn" class="w-full sm:w-auto bg-indigo-600 text-white font-bold py-2 px-6 rounded-full hover:bg-indigo-700 transition duration-300 flex items-center justify-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                        <span>Processar e Distribuir</span>
+                    </button>
+                </div>
+                <div id="statusMessageContainer" class="mt-4">
+                     <p id="statusMessage" class="text-sm font-medium"></p>
+                </div>
+                <div class="mt-8 border-t pt-4">
+                     <h3 class="text-lg font-semibold text-red-600">Zona de Perigo</h3>
+                     <p class="text-gray-500 text-sm mt-1 mb-3">Esta ação é irreversível. Apenas os dados de apólices do **mês atual** serão apagados.</p>
+                     <button id="clearDataBtn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-full hover:bg-red-700 transition duration-300">Limpar Dados do Mês Atual</button>
+                     <p id="clearStatus" class="text-sm mt-2"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAINEL DE ANÁLISE DO ADMINISTRADOR -->
+    <div id="adminAnalysisDashboard">
+        <div class="p-4 md:p-8 max-w-7xl mx-auto">
+            <header class="flex flex-col md:flex-row justify-between items-center mb-8 pb-4 border-b border-gray-300">
+                 <div class="flex items-center space-x-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    <h1 class="text-3xl font-bold text-gray-800">Análise Geral</h1>
+                </div>
+                <button id="backToAdminImportBtn" class="mt-4 md:mt-0 bg-white text-gray-700 font-bold py-2 px-4 rounded-full shadow hover:bg-gray-100 transition duration-300">Voltar para Importação</button>
+            </header>
+
+            <div id="adminAnalysisLoader" class="flex justify-center items-center h-64"><div class="loader"></div></div>
+
+            <div id="adminAnalysisContent" class="hidden space-y-8">
+                <!-- Resumo Geral -->
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Resumo Geral</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h3 class="text-lg font-semibold text-blue-800">Prêmio Líquido Total</h3>
+                            <p id="geralTotalPremio" class="text-3xl font-bold text-blue-900">R$ 0,00</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h3 class="text-lg font-semibold text-green-800">Comissão Total</h3>
+                            <p id="geralTotalComissao" class="text-3xl font-bold text-green-900">R$ 0,00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Análises Agrupadas -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="card p-6"><h2 class="text-xl font-semibold text-gray-700 mb-4">Desempenho por Corretor</h2><div id="analysisByBroker" class="space-y-2 max-h-80 overflow-y-auto"></div></div>
+                    <div class="card p-6"><h2 class="text-xl font-semibold text-gray-700 mb-4">Desempenho por Produto</h2><div id="analysisByProduct" class="space-y-2 max-h-80 overflow-y-auto"></div></div>
+                    <div class="card p-6"><h2 class="text-xl font-semibold text-gray-700 mb-4">Desempenho por Seguradora</h2><div id="analysisByInsurer" class="space-y-2 max-h-80 overflow-y-auto"></div></div>
+                    <div class="card p-6"><h2 class="text-xl font-semibold text-gray-700 mb-4">Desempenho por Unidade</h2><div id="analysisByUnit" class="space-y-2 max-h-80 overflow-y-auto"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TELA DE GERENCIAMENTO DE CORRETORES -->
+    <div id="brokerManagementScreen">
+        <div class="p-4 md:p-8 max-w-7xl mx-auto">
+            <header class="flex justify-between items-center mb-8 pb-4 border-b border-gray-300">
+                <h1 class="text-3xl font-bold text-gray-800">Gerenciar Corretores</h1>
+                <button id="backToAdminBtn" class="bg-white text-gray-700 font-bold py-2 px-4 rounded-full shadow hover:bg-gray-100 transition duration-300">Voltar ao Painel</button>
+            </header>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4">Corretores Cadastrados</h2>
+                        <div id="brokerListContainer" class="overflow-y-auto max-h-96">
+                            <!-- Lista de corretores será inserida aqui -->
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="card p-6">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4">Adicionar Novo Corretor</h2>
+                        <form id="addBrokerForm" class="space-y-4">
+                            <div>
+                                <label for="brokerName" class="block text-sm font-medium text-gray-700">Nome do Corretor</label>
+                                <input type="text" id="brokerName" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+                            </div>
+                             <div>
+                                <label for="brokerEmail" class="block text-sm font-medium text-gray-700">Email de Cadastro</label>
+                                <input type="email" id="brokerEmail" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+                            </div>
+                            <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-full hover:bg-indigo-700">Adicionar</button>
+                            <p id="addBrokerStatus" class="text-sm text-center"></p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TELA DE VISUALIZAÇÃO DO PAINEL DO CORRETOR (ADMIN) -->
+    <div id="adminBrokerViewScreen">
+        <div class="p-4 md:p-8 max-w-7xl mx-auto">
+            <header class="flex flex-col md:flex-row justify-between items-center mb-8 pb-4 border-b border-gray-300">
+                <div class="flex items-center space-x-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <h1 id="adminViewTitle" class="text-3xl font-bold text-gray-800">Painel de </h1>
+                </div>
+                <button id="backToBrokerListBtn" class="mt-4 md:mt-0 bg-white text-gray-700 font-bold py-2 px-4 rounded-full shadow hover:bg-gray-100 transition duration-300">Voltar para a Lista</button>
+            </header>
+
+            <div id="adminViewLoader" class="flex justify-center items-center h-64"><div class="loader"></div></div>
+
+            <div id="adminViewMainContent" class="hidden">
+                <div class="mb-6 flex justify-start items-center space-x-2">
+                    <label for="adminViewMonthSelector" class="text-sm font-medium text-gray-700">Mostrar Desempenho de:</label>
+                    <select id="adminViewMonthSelector" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-auto p-2"></select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="card p-6 flex flex-col"><h3 class="text-lg font-semibold text-gray-700">Prêmio Gerado</h3><p id="adminViewTotalPremio" class="text-4xl font-bold text-gray-900 my-2">R$ 0,00</p><div class="flex-grow overflow-y-auto h-32"><ul id="adminViewListaPremios" class="text-sm text-gray-600 space-y-1"></ul></div></div>
+                    <div class="card p-6 flex flex-col"><h3 class="text-lg font-semibold text-gray-700">Comissões a Receber</h3><p id="adminViewTotalComissao" class="text-4xl font-bold text-gray-900 my-2">R$ 0,00</p><div class="flex-grow overflow-y-auto h-32"><ul id="adminViewListaComissoes" class="text-sm text-gray-600 space-y-1"></ul></div></div>
+                    <div class="card p-6 flex flex-col"><h3 class="text-lg font-semibold text-gray-700">Próximas Renovações</h3><p id="adminViewTotalRenovacoes" class="text-4xl font-bold text-gray-900 my-2">0 apólices</p><div class="flex-grow overflow-y-auto h-32"><ul id="listaRenovacoes" class="text-sm text-gray-600 space-y-2"></ul></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Adicionar Lembrete -->
+    <div id="lembreteModal" class="fixed inset-0 z-50 items-center justify-center hidden">
+        <div class="bg-black bg-opacity-50 absolute inset-0"></div>
+        <div class="bg-white rounded-lg shadow-xl p-6 w-11/12 md:max-w-md mx-auto relative card">
+            <h3 class="text-xl font-semibold mb-4">Criar Novo Lembrete</h3>
+            <form id="lembreteForm">
+                <div class="mb-4"><label for="lembreteTitulo" class="block text-sm font-medium text-gray-700">Título</label><input type="text" id="lembreteTitulo" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"></div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div><label for="lembreteData" class="block text-sm font-medium text-gray-700">Data</label><input type="date" id="lembreteData" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"></div>
+                    <div><label for="lembreteHora" class="block text-sm font-medium text-gray-700">Hora</label><input type="time" id="lembreteHora" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"></div>
+                </div>
+                <div class="mb-4"><label for="lembreteDescricao" class="block text-sm font-medium text-gray-700">Descrição</label><textarea id="lembreteDescricao" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"></textarea></div>
+                <div class="flex justify-end space-x-3"><button type="button" id="cancelLembreteBtn" class="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-full hover:bg-gray-300">Cancelar</button><button type="submit" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-full hover:bg-indigo-700">Salvar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, addDoc, query, where, onSnapshot, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB-8YMMShONDerQSvMZh-rPHO9SmBGU0bY",
+            authDomain: "paineldocorretor-6ae42.firebaseapp.com",
+            projectId: "paineldocorretor-6ae42",
+            storageBucket: "paineldocorretor-6ae42.appspot.com",
+            messagingSenderId: "1039310265593",
+            appId: "1:1039310265593:web:53a6501391503c5147814c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const screens = {
+            loginScreen: document.getElementById('loginScreen'),
+            registerScreen: document.getElementById('registerScreen'),
+            corretorDashboard: document.getElementById('corretorDashboard'),
+            adminDashboard: document.getElementById('adminDashboard'),
+            adminAnalysisDashboard: document.getElementById('adminAnalysisDashboard'),
+            brokerManagementScreen: document.getElementById('brokerManagementScreen'),
+            adminBrokerViewScreen: document.getElementById('adminBrokerViewScreen')
+        };
+        
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const addBrokerForm = document.getElementById('addBrokerForm');
+        const loginError = document.getElementById('loginError');
+        const registerError = document.getElementById('registerError');
+        const showRegisterBtn = document.getElementById('showRegisterBtn');
+        const showLoginBtn = document.getElementById('showLoginBtn');
+        const importBtn = document.getElementById('importBtn');
+        const dataFileInput = document.getElementById('dataFileInput');
+        const statusMessage = document.getElementById('statusMessage');
+        const corretorNameColumnInput = document.getElementById('corretorNameColumn');
+        const clearDataBtn = document.getElementById('clearDataBtn');
+        const clearStatus = document.getElementById('clearStatus');
+        const brokerListContainer = document.getElementById('brokerListContainer');
+        const addBrokerStatus = document.getElementById('addBrokerStatus');
+        
+        let currentUser = null;
+        let unsubscribeListeners = [];
+
+        // --- LÓGICA DE NAVEGAÇÃO E HEADER ---
+        const showScreen = (screenName) => {
+            Object.values(screens).forEach(screenElement => {
+                if (screenElement) {
+                    screenElement.style.display = 'none';
+                }
+            });
+            const targetScreen = screens[screenName];
+            if (targetScreen) {
+                if (screenName === 'loginScreen' || screenName === 'registerScreen') {
+                    targetScreen.style.display = 'flex';
+                } else {
+                    targetScreen.style.display = 'block';
+                }
+            }
+        };
+        
+        showRegisterBtn.addEventListener('click', () => showScreen('registerScreen'));
+        showLoginBtn.addEventListener('click', () => showScreen('loginScreen'));
+        
+        document.body.addEventListener('click', (e) => {
+            if (e.target.closest('#corretorLogoutBtn') || e.target.closest('#adminLogoutBtn')) signOut(auth);
+            if (e.target.closest('#manageBrokersBtn')) showScreen('brokerManagementScreen');
+            if (e.target.closest('#goToAnalysisBtn')) showScreen('adminAnalysisDashboard');
+            if (e.target.closest('#backToAdminBtn') || e.target.closest('#backToAdminImportBtn')) showScreen('adminDashboard');
+            if (e.target.closest('#backToBrokerListBtn')) {
+                 detachDataListeners();
+                 showScreen('brokerManagementScreen');
+                 attachBrokerManagementListeners();
+            }
+        });
+
+        // --- LÓGICA DE AUTENTICAÇÃO ---
+        onAuthStateChanged(auth, async (user) => {
+            detachDataListeners();
+            if (user) {
+                const userDocRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userDocRef);
+
+                if (userDoc.exists()) {
+                    currentUser = { ...user, ...userDoc.data(), uid: user.uid };
+                    if (currentUser.role === 'admin') {
+                        showScreen('adminDashboard');
+                        attachAdminAnalysisListeners();
+                        attachBrokerManagementListeners();
+                    } else {
+                        showScreen('corretorDashboard');
+                        attachCorretorDataListeners();
+                    }
+                } else {
+                    await signOut(auth);
+                }
+            } else {
+                currentUser = null;
+                showScreen('loginScreen');
+            }
+            // Remove loading class to show content
+            document.body.classList.remove('loading');
+        });
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = loginForm.email.value;
+            const password = loginForm.password.value;
+            signInWithEmailAndPassword(auth, email, password).catch(err => loginError.textContent = "Email ou senha inválidos.");
+        });
+
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = registerForm.registerName.value;
+            const email = registerForm.registerEmail.value;
+            const password = registerForm.registerPassword.value;
+            createUserWithEmailAndPassword(auth, email, password)
+                .then(cred => setDoc(doc(db, "users", cred.user.uid), { name, email, role: "corretor" }))
+                .catch(err => registerError.textContent = 'Falha ao criar conta.');
+        });
+        
+        // --- FUNÇÕES DE FORMATAÇÃO E RENDERIZAÇÃO ---
+        const formatarMoeda = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
+        const formatarData = (timestamp) => timestamp?.toDate().toLocaleDateString('pt-BR', { timeZone: 'UTC' }) || 'Data inválida';
+        const renderizarPremios = (data, totalEl, listEl) => { totalEl.textContent = formatarMoeda(data.reduce((acc, item) => acc + item.premio_liquido, 0)); listEl.innerHTML = data.length === 0 ? '<li class="italic">Nenhum prêmio neste mês.</li>' : data.map(item => `<li class="flex justify-between"><span>${item.cliente}</span> <span class="font-semibold text-blue-700">${formatarMoeda(item.premio_liquido)}</span></li>`).join(''); };
+        const renderizarComissoes = (data, totalEl, listEl) => { totalEl.textContent = formatarMoeda(data.reduce((acc, item) => acc + item.comissao, 0)); listEl.innerHTML = data.length === 0 ? '<li class="italic">Nenhuma comissão neste mês.</li>' : data.map(item => `<li class="flex justify-between"><span>${item.cliente}</span> <span class="font-semibold text-green-700">${formatarMoeda(item.comissao)}</span></li>`).join(''); };
+        const renderizarRenovacoes = (data, totalEl, listEl) => { 
+            const hoje = new Date();
+            const limite30dias = new Date();
+            limite30dias.setDate(hoje.getDate() + 30);
+            const sortedData = data.sort((a,b) => a.termino_vigencia.toDate() - b.termino_vigencia.toDate());
+            totalEl.textContent = `${data.length} apólices`; 
+            listEl.innerHTML = data.length === 0 ? '<li class="italic">Nenhuma renovação próxima.</li>' : sortedData.map(item => {
+                const isUrgent = item.termino_vigencia.toDate() <= limite30dias;
+                const textColor = isUrgent ? 'text-red-600 font-bold' : 'text-yellow-700';
+                return `<li class="p-2 bg-gray-50 rounded-md"><div class="flex justify-between"><span class="font-medium">${item.cliente}</span><span class="${textColor}">${formatarData(item.termino_vigencia)}</span></div><div class="text-xs text-gray-500">${item.numero_apolice || 'Não informado'}</div></li>`
+            }).join(''); 
+        };
+        const renderizarLembretes = (data) => { document.getElementById('listaLembretes').innerHTML = data.length === 0 ? '<p class="italic">Nenhum lembrete.</p>' : data.sort((a,b) => new Date(a.data) - new Date(b.data)).map(lembrete => `<div class="bg-white border-l-4 border-indigo-500 p-4 rounded-r-lg shadow-sm flex justify-between items-center"><div><p class="font-semibold">${lembrete.titulo}</p><p class="text-sm text-gray-600">${lembrete.descricao}</p><span class="text-xs font-medium text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">${new Date(lembrete.data + 'T00:00:00').toLocaleDateString('pt-BR')} às ${lembrete.hora}</span></div><button data-id="${lembrete.id}" class="delete-lembrete-btn text-gray-400 hover:text-red-600"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div>`).join(''); document.querySelectorAll('.delete-lembrete-btn').forEach(btn => btn.addEventListener('click', (e) => deleteDoc(doc(db, "lembretes", e.currentTarget.dataset.id)))); };
+        
+        // --- LÓGICA DE DADOS (CORRETOR)---
+        function updateDashboardView(selectedMonth, apolices, elements) {
+            const filteredApolices = apolices.filter(apolice => {
+                if (!apolice.createdAt) return false;
+                const apoliceDate = apolice.createdAt.toDate();
+                const apoliceMonth = `${apoliceDate.getFullYear()}-${String(apoliceDate.getMonth() + 1).padStart(2, '0')}`;
+                return apoliceMonth === selectedMonth;
+            });
+            renderizarPremios(filteredApolices, elements.totalPremioEl, elements.listaPremiosEl);
+            renderizarComissoes(filteredApolices, elements.totalComissaoEl, elements.listaComissoesEl);
+            const hoje = new Date();
+            const renovacoesProximas = apolices.filter(p => p.termino_vigencia && p.termino_vigencia.toDate() >= hoje);
+            renderizarRenovacoes(renovacoesProximas, elements.totalRenovacoesEl, elements.listaRenovacoesEl);
+        }
+
+        function setupMonthFilter(apolices, selectorEl, elements) {
+            const monthSet = new Set(apolices.map(a => a.createdAt ? `${a.createdAt.toDate().getFullYear()}-${String(a.createdAt.toDate().getMonth() + 1).padStart(2, '0')}` : null).filter(Boolean));
+            const sortedMonths = Array.from(monthSet).sort().reverse();
+            const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+            if (!monthSet.has(currentMonth)) sortedMonths.unshift(currentMonth);
+            selectorEl.innerHTML = sortedMonths.map(month => `<option value="${month}">${new Date(month + '-02').toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</option>`).join('');
+            selectorEl.onchange = () => updateDashboardView(selectorEl.value, apolices, elements);
+        }
+
+        function attachCorretorDataListeners() {
+            if (!currentUser) return;
+            document.getElementById('corretorLoader').style.display = 'none';
+            document.getElementById('corretorMainContent').classList.remove('hidden');
+            const uid = currentUser.uid;
+            const elements = { totalPremioEl: document.getElementById('totalPremio'), listaPremiosEl: document.getElementById('listaPremios'), totalComissaoEl: document.getElementById('totalComissao'), listaComissoesEl: document.getElementById('listaComissoes'), totalRenovacoesEl: document.getElementById('totalRenovacoes'), listaRenovacoesEl: document.getElementById('listaRenovacoes') };
+            const apolicesQuery = query(collection(db, "apolices"), where("userId", "==", uid));
+            const lembretesQuery = query(collection(db, "lembretes"), where("userId", "==", uid));
+            unsubscribeListeners.push( onSnapshot(apolicesQuery, s => { const apolices = s.docs.map(d => ({...d.data(), id: d.id})); setupMonthFilter(apolices, document.getElementById('monthSelector'), elements); updateDashboardView(document.getElementById('monthSelector').value, apolices, elements); }), onSnapshot(lembretesQuery, s => renderizarLembretes(s.docs.map(d => ({...d.data(), id: d.id})))) );
+        }
+
+        function detachDataListeners() {
+            unsubscribeListeners.forEach(unsub => unsub());
+            unsubscribeListeners = [];
+        }
+
+        // --- LÓGICA DE GERENCIAMENTO DE CORRETORES (ADMIN) ---
+        function attachBrokerManagementListeners() {
+            const brokersQuery = query(collection(db, "users"), where("role", "==", "corretor"));
+            unsubscribeListeners.push(onSnapshot(brokersQuery, snapshot => {
+                const brokers = snapshot.docs.map(doc => ({...doc.data(), id: doc.id}));
+                brokerListContainer.innerHTML = brokers.length > 0 ? `<ul class="divide-y divide-gray-200">${brokers.map(b => `<li class="py-3 flex justify-between items-center"><div><p class="font-medium text-gray-800">${b.name}</p><p class="text-sm text-gray-500">${b.email}</p></div><button data-uid="${b.id}" data-name="${b.name}" class="view-broker-btn bg-indigo-100 text-indigo-700 text-sm font-semibold py-1 px-3 rounded-full hover:bg-indigo-200">Ver Painel</button></li>`).join('')}</ul>` : '<p class="text-gray-500 italic">Nenhum corretor cadastrado.</p>';
+                document.querySelectorAll('.view-broker-btn').forEach(btn => btn.addEventListener('click', (e) => viewBrokerDashboard(e.currentTarget.dataset.uid, e.currentTarget.dataset.name)));
+            }));
+        }
+
+        function viewBrokerDashboard(uid, name) {
+            showScreen('adminBrokerViewScreen');
+            document.getElementById('adminViewTitle').textContent = `Painel de: ${name}`;
+            const elements = { totalPremioEl: document.getElementById('adminViewTotalPremio'), listaPremiosEl: document.getElementById('adminViewListaPremios'), totalComissaoEl: document.getElementById('adminViewTotalComissao'), listaComissoesEl: document.getElementById('adminViewListaComissoes'), totalRenovacoesEl: document.getElementById('adminViewTotalRenovacoes'), listaRenovacoesEl: document.getElementById('adminViewListaRenovacoes') };
+            const apolicesQuery = query(collection(db, "apolices"), where("userId", "==", uid));
+            unsubscribeListeners.push(onSnapshot(apolicesQuery, s => {
+                document.getElementById('adminViewLoader').style.display = 'none';
+                document.getElementById('adminViewMainContent').classList.remove('hidden');
+                const apolices = s.docs.map(d => ({...d.data(), id: d.id}));
+                setupMonthFilter(apolices, document.getElementById('adminViewMonthSelector'), elements);
+                updateDashboardView(document.getElementById('adminViewMonthSelector').value, apolices, elements);
+            }));
+        }
+        
+        addBrokerForm.addEventListener('submit', (e) => { e.preventDefault(); addBrokerStatus.textContent = 'Use a tela de cadastro para novos usuários.'; setTimeout(() => addBrokerStatus.textContent = '', 4000); });
+
+        // --- LÓGICA DE ANÁLISE GERAL (ADMIN) ---
+        function attachAdminAnalysisListeners() {
+            const apolicesQuery = collection(db, "apolices");
+            const usersQuery = collection(db, "users");
+            unsubscribeListeners.push(onSnapshot(apolicesQuery, async (apolicesSnapshot) => {
+                const usersSnapshot = await getDocs(usersQuery);
+                const usersMap = new Map(usersSnapshot.docs.map(d => [d.id, d.data().name]));
+                const apolices = apolicesSnapshot.docs.map(d => ({...d.data(), id: d.id}));
+                document.getElementById('adminAnalysisLoader').style.display = 'none';
+                document.getElementById('adminAnalysisContent').classList.remove('hidden');
+                renderGeneralSummary(apolices);
+                renderAggregatedAnalysis(apolices, 'corretor', 'analysisByBroker', usersMap);
+                renderAggregatedAnalysis(apolices, 'produto', 'analysisByProduct');
+                renderAggregatedAnalysis(apolices, 'seguradora', 'analysisByInsurer');
+                renderAggregatedAnalysis(apolices, 'unidade', 'analysisByUnit');
+            }));
+        }
+
+        function renderGeneralSummary(apolices) {
+            document.getElementById('geralTotalPremio').textContent = formatarMoeda(apolices.reduce((s, a) => s + a.premio_liquido, 0));
+            document.getElementById('geralTotalComissao').textContent = formatarMoeda(apolices.reduce((s, a) => s + a.comissao, 0));
+        }
+
+        function renderAggregatedAnalysis(apolices, groupByKey, elementId, usersMap = null) {
+            const container = document.getElementById(elementId);
+            const grouped = apolices.reduce((acc, apolice) => {
+                const key = groupByKey === 'corretor' ? (usersMap.get(apolice.userId) || 'Desconhecido') : (apolice[groupByKey] || 'Não especificado');
+                if (!acc[key]) acc[key] = { premio_liquido: 0, comissao: 0, count: 0 };
+                acc[key].premio_liquido += apolice.premio_liquido;
+                acc[key].comissao += apolice.comissao;
+                acc[key].count++;
+                return acc;
+            }, {});
+            const sortedData = Object.entries(grouped).sort(([,a], [,b]) => b.premio_liquido - a.premio_liquido);
+            container.innerHTML = sortedData.length === 0 ? '<p class="italic text-gray-500">Nenhum dado para exibir.</p>' : sortedData.map(([key, value]) => `<div class="bg-gray-50 p-3 rounded-lg"><p class="font-semibold text-gray-800">${key}</p><div class="flex justify-between items-center text-sm mt-1"><span class="text-blue-700">Prêmio: ${formatarMoeda(value.premio_liquido)}</span><span class="text-green-700">Comissão: ${formatarMoeda(value.comissao)}</span><span class="text-gray-500">${value.count} apólice(s)</span></div></div>`).join('');
+        }
+
+        // --- LÓGICA DE IMPORTAÇÃO E LIMPEZA (ADMIN) ---
+        const parseCurrency = (v) => typeof v === 'number' ? v : (parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0);
+        const normalizeHeader = (h) => h.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+        const processarPlanilha = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+                    resolve(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]));
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(file);
+        });
+        importBtn.addEventListener('click', async () => {
+            if (!dataFileInput.files[0]) return statusMessage.textContent = 'Por favor, selecione a planilha de dados.';
+            statusMessage.textContent = 'Processando...';
+            try {
+                const usersSnapshot = await getDocs(collection(db, "users"));
+                const nameToUserMap = new Map(usersSnapshot.docs.map(d => [d.data().name?.trim().toUpperCase(), { uid: d.id }]));
+                const data = await processarPlanilha(dataFileInput.files[0]);
+                const batch = writeBatch(db);
+                let processedCount = 0, notFoundNames = new Set();
+                data.forEach((row, index) => {
+                    const normalizedRow = Object.fromEntries(Object.entries(row).map(([k, v]) => [normalizeHeader(k), v]));
+                    if (index === 0) console.log("Chaves normalizadas:", Object.keys(normalizedRow));
+                    const user = nameToUserMap.get(row[corretorNameColumnInput.value.trim()]?.trim().toUpperCase());
+                    if (user) {
+                        batch.set(doc(collection(db, "apolices")), { userId: user.uid, cliente: normalizedRow['nome'], cpf_cnpj: normalizedRow['cpfcnpj'], numero_apolice: normalizedRow['napolice'], premio_liquido: parseCurrency(normalizedRow['prliquido']), comissao: parseCurrency(normalizedRow['apagarproducao1']), termino_vigencia: normalizedRow['termino'], seguradora: normalizedRow['seguradora'], produto: normalizedRow['produto'], unidade: normalizedRow['unidade'], createdAt: new Date() });
+                        processedCount++;
+                    } else {
+                        notFoundNames.add(row[corretorNameColumnInput.value.trim()]);
+                    }
+                });
+                await batch.commit();
+                statusMessage.textContent = `Sucesso! ${processedCount} registros distribuídos.` + (notFoundNames.size > 0 ? ` Nomes não encontrados: ${[...notFoundNames].join(', ')}` : '');
+            } catch (error) { statusMessage.textContent = 'Erro ao processar a planilha.'; console.error(error); }
+        });
+        clearDataBtn.addEventListener('click', async () => {
+            clearStatus.textContent = 'Limpando...';
+            const agora = new Date();
+            const inicioDoMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+            const q = query(collection(db, "apolices"), where("createdAt", ">=", inicioDoMes));
+            const snapshot = await getDocs(q);
+            if (snapshot.empty) return clearStatus.textContent = 'Nenhum dado para o mês atual.';
+            const batch = writeBatch(db);
+            snapshot.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+            clearStatus.textContent = `Sucesso! ${snapshot.size} registros do mês atual foram removidos.`;
+        });
+
+        // --- LÓGICA DO MODAL DE LEMBRETES ---
+        document.getElementById('addLembreteBtn').addEventListener('click', () => { lembreteModal.style.display = 'flex'; });
+        document.getElementById('cancelLembreteBtn').addEventListener('click', () => { lembreteModal.style.display = 'none'; });
+        lembreteForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, "lembretes"), { userId: currentUser.uid, titulo: lembreteForm.lembreteTitulo.value, data: lembreteForm.lembreteData.value, hora: lembreteForm.lembreteHora.value, descricao: lembreteForm.lembreteDescricao.value });
+            lembreteModal.style.display = 'none';
+        });
+
+    </script>
+</body>
+</ht
