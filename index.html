@@ -461,7 +461,12 @@
             if (e.target.closest('#corretorLogoutBtn') || e.target.closest('#adminLogoutBtn')) signOut(auth);
             if (e.target.closest('#manageBrokersBtn')) showScreen('brokerManagementScreen');
             if (e.target.closest('#goToAnalysisBtn')) showScreen('adminAnalysisDashboard');
-            if (e.target.closest('#goToPowerBiBtn')) showScreen('powerBiDashboard');
+            if (e.target.closest('#goToPowerBiBtn')) {
+                const adminBiFrame = document.getElementById('adminBiFrame');
+                const publicBiUrl = "https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284&filterPaneEnabled=false";
+                adminBiFrame.src = publicBiUrl;
+                showScreen('powerBiDashboard');
+            }
             if (e.target.closest('#goToMyBiReportBtn')) showAndFilterBiReport();
             if (e.target.closest('#backToCorretorPanelBtn')) showScreen('corretorDashboard');
             if (e.target.closest('#backToAdminBtn') || e.target.closest('#backToAdminImportBtn') || e.target.closest('#backToAdminFromBiBtn')) showScreen('adminDashboard');
