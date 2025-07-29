@@ -257,7 +257,7 @@
                    title="Power BI Report" 
                    width="100%" 
                    height="100%" 
-                   src="https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284" 
+                   src="https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284&filterPaneEnabled=false" 
                    frameborder="0" 
                    allowFullScreen="true">
                </iframe>
@@ -737,7 +737,7 @@
         function showAndFilterBiReport() {
             if (!currentUser) return;
 
-            const baseBiUrl = "https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284"; 
+            const baseBiUrl = "https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284&filterPaneEnabled=false"; 
 
             // IMPORTANTE: Verifique se estes nomes correspondem EXATAMENTE aos da sua planilha/BI
             const tableName = "Folha1";
