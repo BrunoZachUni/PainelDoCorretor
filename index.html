@@ -124,7 +124,7 @@
 
             <div id="corretorMainContent" class="hidden">
                 <div class="mb-6 flex justify-start items-center space-x-2">
-                    <label for="monthSelector" class="text-sm font-medium text-gray-700">Mostrar Produção de:</label>
+                    <label for="monthSelector" class="text-sm font-medium text-gray-700">Mostrar Desempenho de:</label>
                     <select id="monthSelector" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-auto p-2"></select>
                 </div>
 
@@ -369,19 +369,6 @@
             </form>
         </div>
     </div>
-    
-    <!-- Modal de Confirmação para Excluir Lembrete -->
-    <div id="deleteConfirmationModal" class="fixed inset-0 z-50 items-center justify-center hidden">
-        <div class="bg-black bg-opacity-50 absolute inset-0"></div>
-        <div class="bg-white rounded-lg shadow-xl p-6 w-11/12 md:max-w-md mx-auto relative card">
-            <h3 class="text-xl font-semibold mb-4">Confirmar Exclusão</h3>
-            <p class="text-gray-600 mb-6">Você tem certeza que deseja excluir este lembrete? Esta ação não pode ser desfeita.</p>
-            <div class="flex justify-end space-x-3">
-                <button type="button" id="cancelDeleteBtn" class="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-full hover:bg-gray-300">Cancelar</button>
-                <button type="button" id="confirmDeleteBtn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-full hover:bg-red-700">Excluir</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Firebase SDKs -->
     <script type="module">
@@ -429,13 +416,9 @@
         const clearStatus = document.getElementById('clearStatus');
         const brokerListContainer = document.getElementById('brokerListContainer');
         const addBrokerStatus = document.getElementById('addBrokerStatus');
-        const deleteConfirmationModal = document.getElementById('deleteConfirmationModal');
-        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
         
         let currentUser = null;
         let unsubscribeListeners = [];
-        let reminderToDeleteId = null;
 
         // --- LÓGICA DE NAVEGAÇÃO E HEADER ---
         const showScreen = (screenName) => {
@@ -461,12 +444,7 @@
             if (e.target.closest('#corretorLogoutBtn') || e.target.closest('#adminLogoutBtn')) signOut(auth);
             if (e.target.closest('#manageBrokersBtn')) showScreen('brokerManagementScreen');
             if (e.target.closest('#goToAnalysisBtn')) showScreen('adminAnalysisDashboard');
-            if (e.target.closest('#goToPowerBiBtn')) {
-                const adminBiFrame = document.getElementById('adminBiFrame');
-                const embedUrl = "https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284";
-                adminBiFrame.src = embedUrl;
-                showScreen('powerBiDashboard');
-            }
+            if (e.target.closest('#goToPowerBiBtn')) showScreen('powerBiDashboard');
             if (e.target.closest('#goToMyBiReportBtn')) showAndFilterBiReport();
             if (e.target.closest('#backToCorretorPanelBtn')) showScreen('corretorDashboard');
             if (e.target.closest('#backToAdminBtn') || e.target.closest('#backToAdminImportBtn') || e.target.closest('#backToAdminFromBiBtn')) showScreen('adminDashboard');
@@ -528,27 +506,23 @@
         const renderizarComissoes = (data, totalEl, listEl) => { totalEl.textContent = formatarMoeda(data.reduce((acc, item) => acc + item.comissao, 0)); listEl.innerHTML = data.length === 0 ? '<li class="italic">Nenhuma comissão neste mês.</li>' : data.map(item => `<li class="flex justify-between"><span>${item.cliente}</span> <span class="font-semibold text-green-700">${formatarMoeda(item.comissao)}</span></li>`).join(''); };
         const renderizarRenovacoes = (data, totalEl, listEl) => { 
             const hoje = new Date();
+            const limite30dias = new Date();
+            limite30dias.setDate(hoje.getDate() + 30);
             const sortedData = data.sort((a,b) => a.termino_vigencia.toDate() - b.termino_vigencia.toDate());
             totalEl.textContent = `${data.length} apólices`; 
             listEl.innerHTML = data.length === 0 ? '<li class="italic">Nenhuma renovação próxima.</li>' : sortedData.map(item => {
-                const isUrgent = item.termino_vigencia.toDate() <= new Date(hoje.getTime() + 30 * 24 * 60 * 60 * 1000);
+                const isUrgent = item.termino_vigencia.toDate() <= limite30dias;
                 const textColor = isUrgent ? 'text-red-600 font-bold' : 'text-yellow-700';
                 return `<li class="p-2 bg-gray-50 rounded-md"><div class="flex justify-between"><span class="font-medium">${item.cliente}</span><span class="${textColor}">${formatarData(item.termino_vigencia)}</span></div><div class="text-xs text-gray-500">${item.numero_apolice || 'Não informado'}</div></li>`
             }).join(''); 
         };
-        const renderizarLembretes = (data) => { 
-            document.getElementById('listaLembretes').innerHTML = data.length === 0 ? '<p class="italic">Nenhum lembrete.</p>' : data.sort((a,b) => new Date(a.data) - new Date(b.data)).map(lembrete => `<div class="bg-white border-l-4 border-indigo-500 p-4 rounded-r-lg shadow-sm flex justify-between items-center"><div><p class="font-semibold">${lembrete.titulo}</p><p class="text-sm text-gray-600">${lembrete.descricao}</p><span class="text-xs font-medium text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">${new Date(lembrete.data + 'T00:00:00').toLocaleDateString('pt-BR')} às ${lembrete.hora}</span></div><button data-id="${lembrete.id}" class="delete-lembrete-btn text-gray-400 hover:text-red-600"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button></div>`).join(''); 
-            document.querySelectorAll('.delete-lembrete-btn').forEach(btn => btn.addEventListener('click', (e) => {
-                reminderToDeleteId = e.currentTarget.dataset.id;
-                deleteConfirmationModal.style.display = 'flex';
-            })); 
-        };
+        const renderizarLembretes = (data) => { document.getElementById('listaLembretes').innerHTML = data.length === 0 ? '<p class="italic">Nenhum lembrete.</p>' : data.sort((a,b) => new Date(a.data) - new Date(b.data)).map(lembrete => `<div class="bg-white border-l-4 border-indigo-500 p-4 rounded-r-lg shadow-sm flex justify-between items-center"><div><p class="font-semibold">${lembrete.titulo}</p><p class="text-sm text-gray-600">${lembrete.descricao}</p><span class="text-xs font-medium text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">${new Date(lembrete.data + 'T00:00:00').toLocaleDateString('pt-BR')} às ${lembrete.hora}</span></div><button data-id="${lembrete.id}" class="delete-lembrete-btn text-gray-400 hover:text-red-600"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div>`).join(''); document.querySelectorAll('.delete-lembrete-btn').forEach(btn => btn.addEventListener('click', (e) => deleteDoc(doc(db, "lembretes", e.currentTarget.dataset.id)))); };
         
         // --- LÓGICA DE DADOS (CORRETOR)---
         function updateDashboardView(selectedMonth, apolices, elements) {
             const filteredApolices = apolices.filter(apolice => {
-                if (!apolice.inicio_vigencia) return false;
-                const apoliceDate = apolice.inicio_vigencia.toDate();
+                if (!apolice.createdAt) return false;
+                const apoliceDate = apolice.createdAt.toDate();
                 const apoliceMonth = `${apoliceDate.getFullYear()}-${String(apoliceDate.getMonth() + 1).padStart(2, '0')}`;
                 return apoliceMonth === selectedMonth;
             });
@@ -560,12 +534,11 @@
         }
 
         function setupMonthFilter(apolices, selectorEl, elements) {
-            const monthSet = new Set(apolices.map(a => a.inicio_vigencia ? `${a.inicio_vigencia.toDate().getFullYear()}-${String(a.inicio_vigencia.toDate().getMonth() + 1).padStart(2, '0')}` : null).filter(Boolean));
+            const monthSet = new Set(apolices.map(a => a.createdAt ? `${a.createdAt.toDate().getFullYear()}-${String(a.createdAt.toDate().getMonth() + 1).padStart(2, '0')}` : null).filter(Boolean));
             const sortedMonths = Array.from(monthSet).sort().reverse();
             const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
             if (!monthSet.has(currentMonth)) sortedMonths.unshift(currentMonth);
             selectorEl.innerHTML = sortedMonths.map(month => `<option value="${month}">${new Date(month + '-02').toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</option>`).join('');
-            selectorEl.value = currentMonth;
             selectorEl.onchange = () => updateDashboardView(selectorEl.value, apolices, elements);
         }
 
@@ -598,7 +571,7 @@
         function viewBrokerDashboard(uid, name) {
             showScreen('adminBrokerViewScreen');
             document.getElementById('adminViewTitle').textContent = `Painel de: ${name}`;
-            const elements = { totalPremioEl: document.getElementById('adminViewTotalPremio'), listaPremiosEl: document.getElementById('adminViewListaPremios'), totalComissaoEl: document.getElementById('adminViewTotalComissao'), listaComissoesEl: document.getElementById('adminViewListaComissoes'), totalRenovacoesEl: document.getElementById('adminViewTotalRenovacoes'), listaRenovacoesEl: document.getElementById('listaRenovacoes') };
+            const elements = { totalPremioEl: document.getElementById('adminViewTotalPremio'), listaPremiosEl: document.getElementById('adminViewListaPremios'), totalComissaoEl: document.getElementById('adminViewTotalComissao'), listaComissoesEl: document.getElementById('adminViewListaComissoes'), totalRenovacoesEl: document.getElementById('adminViewTotalRenovacoes'), listaRenovacoesEl: document.getElementById('adminViewListaRenovacoes') };
             const apolicesQuery = query(collection(db, "apolices"), where("userId", "==", uid));
             unsubscribeListeners.push(onSnapshot(apolicesQuery, s => {
                 document.getElementById('adminViewLoader').style.display = 'none';
@@ -686,8 +659,7 @@
                             numero_apolice: normalizedRow['napolice'], 
                             premio_liquido: parseCurrency(normalizedRow['prliquido']), 
                             comissao: parseCurrency(normalizedRow['apagarproducao1']), 
-                            inicio_vigencia: normalizedRow['inicio'] || null,
-                            termino_vigencia: normalizedRow['termino'] || null, 
+                            termino_vigencia: normalizedRow['termino'], 
                             seguradora: normalizedRow['seguradora'], 
                             produto: normalizedRow['produto'], 
                             unidade: normalizedRow['unidade'],
@@ -725,27 +697,21 @@
             lembreteModal.style.display = 'none';
         });
 
-        cancelDeleteBtn.addEventListener('click', () => {
-            deleteConfirmationModal.style.display = 'none';
-            reminderToDeleteId = null;
-        });
-
-        confirmDeleteBtn.addEventListener('click', async () => {
-            if (reminderToDeleteId) {
-                await deleteDoc(doc(db, "lembretes", reminderToDeleteId));
-                reminderToDeleteId = null;
-                deleteConfirmationModal.style.display = 'none';
-            }
-        });
-
-        // --- LÓGICA DO POWER BI ---
+        // --- LÓGICA DO POWER BI (CORRIGIDA) ---
         function showAndFilterBiReport() {
             if (!currentUser) return;
 
-            const embedUrl = "https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284"; 
+            // A URL base já contém os parâmetros necessários para a autenticação automática.
+            // O Power BI aplicará a Segurança em Nível de Linha (RLS) automaticamente
+            // com base no usuário que está logado no navegador (usando a função USERPRINCIPALNAME() no BI).
+            const baseBiUrl = "https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284"; 
+            
+            // **NÃO** é necessário adicionar um filtro de URL. A RLS cuida da filtragem.
+            // A linha abaixo que criava o filtro foi removida.
+            const finalUrl = baseBiUrl;
 
             const iframe = document.getElementById('corretorBiFrame');
-            iframe.src = embedUrl;
+            iframe.src = finalUrl;
             showScreen('powerBiCorretorDashboard');
         }
 
