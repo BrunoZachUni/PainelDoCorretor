@@ -463,8 +463,8 @@
             if (e.target.closest('#goToAnalysisBtn')) showScreen('adminAnalysisDashboard');
             if (e.target.closest('#goToPowerBiBtn')) {
                 const adminBiFrame = document.getElementById('adminBiFrame');
-                const publicBiUrl = "https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284";
-                adminBiFrame.src = publicBiUrl;
+                const embedUrl = "https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284";
+                adminBiFrame.src = embedUrl;
                 showScreen('powerBiDashboard');
             }
             if (e.target.closest('#goToMyBiReportBtn')) showAndFilterBiReport();
@@ -742,10 +742,10 @@
         function showAndFilterBiReport() {
             if (!currentUser) return;
 
-            const baseBiUrl = "https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284&filterPaneEnabled=false"; 
+            const embedUrl = "https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284"; 
 
             const iframe = document.getElementById('corretorBiFrame');
-            iframe.src = baseBiUrl;
+            iframe.src = embedUrl;
             showScreen('powerBiCorretorDashboard');
         }
 
