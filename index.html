@@ -257,7 +257,7 @@
                    title="Power BI Report" 
                    width="100%" 
                    height="100%" 
-                   src="https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284&filterPaneEnabled=false" 
+                   src="" 
                    frameborder="0" 
                    allowFullScreen="true">
                </iframe>
@@ -463,7 +463,7 @@
             if (e.target.closest('#goToAnalysisBtn')) showScreen('adminAnalysisDashboard');
             if (e.target.closest('#goToPowerBiBtn')) {
                 const adminBiFrame = document.getElementById('adminBiFrame');
-                const publicBiUrl = "https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284&filterPaneEnabled=false";
+                const publicBiUrl = "https://app.powerbi.com/view?r=eyJrIjoiYzVlZDZhYmQtMzI2ZS00ZmIwLTkyY2QtZDk4MTE4ZDIwZDQ3IiwidCI6ImFjYmRiYWI5LWU5NTQtNDkzMy04NGVjLTk1YzhjNDc0YzI4NCJ9";
                 adminBiFrame.src = publicBiUrl;
                 showScreen('powerBiDashboard');
             }
@@ -742,13 +742,13 @@
         function showAndFilterBiReport() {
             if (!currentUser) return;
 
-            const baseBiUrl = "https://app.powerbi.com/reportEmbed?reportId=c4cb7310-c9ac-409a-acad-8b0cfbb701b1&autoAuth=true&ctid=acbdbab9-e954-4933-84ec-95c8c474c284&filterPaneEnabled=false"; 
+            const baseBiUrl = "https://app.powerbi.com/view?r=eyJrIjoiYzVlZDZhYmQtMzI2ZS00ZmIwLTkyY2QtZDk4MTE4ZDIwZDQ3IiwidCI6ImFjYmRiYWI5LWU5NTQtNDkzMy04NGVjLTk1YzhjNDc0YzI4NCJ9"; 
 
             // IMPORTANTE: Verifique se estes nomes correspondem EXATAMENTE aos da sua planilha/BI
             const tableName = "Folha1";
             const columnName = "Corretor";
             
-            const userName = currentUser.name;
+            const userName = currentUser.name.toUpperCase();
             const finalUrl = `${baseBiUrl}&filter=${tableName}/${columnName} eq '${userName}'`;
 
             const iframe = document.getElementById('corretorBiFrame');
